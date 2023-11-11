@@ -1,12 +1,44 @@
 from os import urandom
 import hashlib
-
+import random
+import math
 
 class Key:
     def __init__(self, m, e):
         self.m = m
         self.e = e
 
+class Primes:
+    def __init__(self, p: int, q: int):
+        self.p = p
+        self.q = q
+
+def isPrime(n: int) -> bool:
+    a = random.randint(2, n - 1)
+    mcd = math.gcd(a, n)
+    if mcd == 1:
+        return True
+    else:
+        return False
+
+
+def generatePrime(bit: int) -> int:
+    while True:
+        n = random.randint(2 ** (bit - 1), 2**bit - 1)
+        if isPrime(n):
+            return n
+
+def GeneratePrimes(bit: int) -> Primes:
+    pBit = bit // 2
+    qBit = bit - pBit
+    while True:
+        p = generatePrime(pBit)
+        q = generatePrime(qBit)
+        if p != q and (p*q).bit_length() == bit:
+            break
+    if p > q:
+        p, q = q, p
+    return Primes(p, q)
 
 def XOR(a: bytes, b: bytes) -> bytes:
     """XOR two byte strings together."""
