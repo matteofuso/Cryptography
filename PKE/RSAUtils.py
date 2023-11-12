@@ -1,6 +1,6 @@
 from os import urandom
+from PKE import Primality
 import hashlib
-import random
 import math
 
 class Key:
@@ -13,28 +13,14 @@ class Primes:
         self.p = p
         self.q = q
 
-def isPrime(n: int) -> bool:
-    a = random.randint(2, n - 1)
-    mcd = math.gcd(a, n)
-    if mcd == 1:
-        return True
-    else:
-        return False
-
-
-def generatePrime(bit: int) -> int:
-    while True:
-        n = random.randint(2 ** (bit - 1), 2**bit - 1)
-        if isPrime(n):
-            return n
-
-def GeneratePrimes(bit: int) -> Primes:
+def GeneratePrimes(bit: int, e:int) -> Primes:
+    """Generate two primes p and q with bit length bit and e as public exponent."""
     pBit = bit // 2
     qBit = bit - pBit
     while True:
-        p = generatePrime(pBit)
-        q = generatePrime(qBit)
-        if p != q and (p*q).bit_length() == bit:
+        p = Primality.GenerateProbeblyPrime(pBit)
+        q = Primality.GenerateProbeblyPrime(qBit)
+        if p != q and (p*q).bit_length() == bit and math.gcd(e, (p-1)*(q-1)) == 1:
             break
     if p > q:
         p, q = q, p
