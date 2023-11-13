@@ -1,4 +1,4 @@
-from PKE.First_primes import first_primes
+from Utils.FirstPrimes import first_primes
 import random
 import math
 

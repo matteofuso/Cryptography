@@ -1,67 +1,102 @@
-from PKE import RSAUtils
+from PKE import RSAFunctions
+from Utils import PEM, BytesOperations
 import math
 
 
 class RSA:
     def PrimitiveEncrypt(self, message: str) -> bytes:
         """RSA encryption primitive (RSAEP)"""
-        m = RSAUtils.BytesToInt(message.encode())
-        e = RSAUtils.PrimitiveEncrypt(self.key, m)
-        return RSAUtils.IntToBytes(e)
+        m = BytesOperations.BytesToInt(message.encode())
+        e = RSAFunctions.PrimitiveEncrypt(self.key, m)
+        return BytesOperations.IntToBytes(e)
 
     def PrimitiveDecrypt(self, ciphertext: bytes) -> str:
         """RSA decryption primitive (RSADP)"""
-        m = RSAUtils.BytesToInt(ciphertext)
-        c = RSAUtils.PrimitiveDecrypt(self.key, m)
-        return RSAUtils.IntToBytes(c).decode()
+        m = BytesOperations.BytesToInt(ciphertext)
+        c = RSAFunctions.PrimitiveDecrypt(self.key, m)
+        return BytesOperations.IntToBytes(c).decode()
 
     def Encrypt(self, message: str, L=b"") -> bytes:
         """RSA encryption (RSAES-OAEP-ENCRYPT)"""
-        return RSAUtils.Encrypt(message.encode(), self.key, L=L)
+        return RSAFunctions.Encrypt(message.encode(), self.key, L=L)
 
     def Decrypt(self, ciphertext: bytes, L=b"") -> str:
         """RSA decryption (RSAES-OAEP-DECRYPT)"""
-        return RSAUtils.Decrypt(ciphertext, self.key, L=L).decode()
+        return RSAFunctions.Decrypt(ciphertext, self.key, L=L).decode()
 
 
 class PublicKey(RSA):
     def __init__(self, n, e) -> None:
-        self.key = RSAUtils.Key(n, e)
+        self.key = RSAFunctions.Key(n, e)
 
     def __str__(self) -> str:
         return f"n: {self.key.m}, e: {self.key.e}"
+
+    def Export(self) -> str:
+        # RSAPublicKey ::= SEQUENCE {
+        #     modulus           INTEGER,  -- n
+        #     publicExponent    INTEGER   -- e
+        # }
+        payload = PEM.EncodeSequence([self.key.m, self.key.e])
+        return PEM.BuildPEM(payload, "RSA PUBLIC KEY")
 
 
 class PrivateKey(RSA):
     def __init__(self, **args) -> None:
         if "p" in args and "q" in args:
-            self.primes = RSAUtils.Primes(args["p"], args["q"])
+            self.primes = RSAFunctions.Primes(args["p"], args["q"])
             n = args["p"] * args["q"]
             if "d" in args and "e" in args:
-                self.key = RSAUtils.Key(n, args["d"])
+                self.key = RSAFunctions.Key(n, args["d"])
                 self.public = PublicKey(n, args["e"])
             else:
-                self.GenerateKeys()
+                self = GenerateKeys(self.primes)
         else:
             if "n" in args and "d" in args:
-                self.key = RSAUtils.Key(args["n"], args["d"])
+                self.key = RSAFunctions.Key(args["n"], args["d"])
             if "n" in args and "e" in args:
                 self.public = PublicKey(args["n"], args["e"])
 
     def __str__(self) -> str:
         return f"n: {self.key.m}, d: {self.key.e}"
 
-    def Generate(self, bit: int = 2048, e: int = 65537, **args) -> None:
-        """Generate a private key with bit length bit and e as public exponent."""
-        if "p" in args and "q" in args:
-            self.primes = RSAUtils.Primes(args["p"], args["q"])
-        self.primes = RSAUtils.GeneratePrimes(bit, e)
-        self.GenerateKeys(e)
-        return self
+    def Export(self) -> str:
+        # RSAPrivateKey ::= SEQUENCE {
+        #     version           Version,
+        #     modulus           INTEGER,  -- n
+        #     publicExponent    INTEGER,  -- e
+        #     privateExponent   INTEGER,  -- d
+        #     prime1            INTEGER,  -- p
+        #     prime2            INTEGER,  -- q
+        #     exponent1         INTEGER,  -- d mod (p-1)
+        #     exponent2         INTEGER,  -- d mod (q-1)
+        #     coefficient       INTEGER,  -- (inverse of q) mod p
+        #     otherPrimeInfos   OtherPrimeInfos OPTIONAL
+        # }
+        payload = PEM.EncodeSequence([
+            0,
+            self.key.m,
+            self.public.key.e,
+            self.key.e,
+            self.primes.p,
+            self.primes.q,
+            self.key.e % (self.primes.p - 1),
+            self.key.e % (self.primes.q - 1),
+            pow(self.primes.q, -1, self.primes.p),
+        ])
+        return PEM.BuildPEM(payload, "RSA PRIVATE KEY")
 
-    def GenerateKeys(self, e: int = 65537):
-        """Generate public and private key."""
-        n = self.primes.p * self.primes.q
-        self.public = PublicKey(n, e)
-        d = pow(e, -1, math.lcm(self.primes.p - 1, self.primes.q - 1))
-        self.key = RSAUtils.Key(n, d)
+
+def Generate(bit: int = 2048, e: int = 65537, **args) -> None:
+    """Generate a private key with bit length bit and e as public exponent."""
+    if "p" in args and "q" in args:
+        primes = RSAFunctions.Primes(args["p"], args["q"])
+    primes = RSAFunctions.GeneratePrimes(bit, e)
+    return GenerateKeys(primes, e)
+
+
+def GenerateKeys(primes, e: int = 65537):
+    """Generate public and private key."""
+    n = primes.p * primes.q
+    d = pow(e, -1, math.lcm(primes.p - 1, primes.q - 1))
+    return PrivateKey(n=n, d=d, e=e, p=primes.p, q=primes.q)
