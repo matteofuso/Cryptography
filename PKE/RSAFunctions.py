@@ -1,26 +1,80 @@
 from os import urandom
-from Utils import Primality, BytesOperations
+from Utils import Primality, BytesOperations, DER
 import hashlib
 import math
+
 
 class Key:
     def __init__(self, m, e):
         self.m = m
         self.e = e
 
+
 class Primes:
     def __init__(self, p: int, q: int):
         self.p = p
         self.q = q
 
-def GeneratePrimes(bit: int, e:int) -> Primes:
+
+def PrivateKeyExport(n, e, d, p, q, oid = "1.2.840.113549.1.1.1"):
+    # PrivateKeyInfo ::= SEQUENCE {
+    #     version                   Version,
+    #     privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+    #     privateKey                PrivateKey,
+    #     attributes           [0]  IMPLICIT Attributes OPTIONAL
+    # }
+    payload = DER.SequenceEncode(
+        [
+            DER.NumberEncode(0),
+            DER.SequenceEncode(
+                [DER.OIDEncode(oid), DER.NullEncode()]
+            ),
+            DER.OctetStringEncode(
+                DER.SequenceEncode(
+                    [
+                        DER.NumberEncode(0),
+                        DER.NumberEncode(n),
+                        DER.NumberEncode(e),
+                        DER.NumberEncode(d),
+                        DER.NumberEncode(p),
+                        DER.NumberEncode(q),
+                        DER.NumberEncode(d % (p - 1)),
+                        DER.NumberEncode(d % (q - 1)),
+                        DER.NumberEncode(pow(q, -1, p)),
+                    ]
+                )
+            ),
+        ]
+    )
+    return DER.BuildPEM(payload, "RSA PRIVATE KEY")
+
+
+def PublicKeyExport(n, e, oid = "1.2.840.113549.1.1.1"):
+    payload = DER.SequenceEncode(
+        [
+            DER.SequenceEncode(
+                [DER.OIDEncode(oid), DER.NullEncode()]
+            ),
+            DER.BitStringEncode(
+                DER.SequenceEncode([DER.NumberEncode(n), DER.NumberEncode(e)])
+            ),
+        ]
+    )
+    return DER.BuildPEM(payload, "PUBLIC KEY")
+
+
+def GeneratePrimes(bit: int, e: int) -> Primes:
     """Generate two primes p and q with bit length bit and e as public exponent."""
     pBit = bit // 2
     qBit = bit - pBit
     while True:
         p = Primality.GenerateProbeblyPrime(pBit)
         q = Primality.GenerateProbeblyPrime(qBit)
-        if p != q and (p*q).bit_length() == bit and math.gcd(e, (p-1)*(q-1)) == 1:
+        if (
+            p != q
+            and (p * q).bit_length() == bit
+            and math.gcd(e, (p - 1) * (q - 1)) == 1
+        ):
             break
     if p > q:
         p, q = q, p

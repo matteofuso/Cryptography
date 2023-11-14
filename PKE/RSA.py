@@ -1,5 +1,5 @@
 from PKE import RSAFunctions
-from Utils import PEM, BytesOperations
+from Utils import BytesOperations
 import math
 
 
@@ -33,12 +33,7 @@ class PublicKey(RSA):
         return f"n: {self.key.m}, e: {self.key.e}"
 
     def Export(self) -> str:
-        # RSAPublicKey ::= SEQUENCE {
-        #     modulus           INTEGER,  -- n
-        #     publicExponent    INTEGER   -- e
-        # }
-        payload = PEM.EncodeSequence([self.key.m, self.key.e])
-        return PEM.BuildPEM(payload, "RSA PUBLIC KEY")
+        return RSAFunctions.PublicKeyExport(self.key.m, self.key.e)
 
 
 class PrivateKey(RSA):
@@ -61,33 +56,10 @@ class PrivateKey(RSA):
         return f"n: {self.key.m}, d: {self.key.e}"
 
     def Export(self) -> str:
-        # RSAPrivateKey ::= SEQUENCE {
-        #     version           Version,
-        #     modulus           INTEGER,  -- n
-        #     publicExponent    INTEGER,  -- e
-        #     privateExponent   INTEGER,  -- d
-        #     prime1            INTEGER,  -- p
-        #     prime2            INTEGER,  -- q
-        #     exponent1         INTEGER,  -- d mod (p-1)
-        #     exponent2         INTEGER,  -- d mod (q-1)
-        #     coefficient       INTEGER,  -- (inverse of q) mod p
-        #     otherPrimeInfos   OtherPrimeInfos OPTIONAL
-        # }
-        payload = PEM.EncodeSequence([
-            0,
-            self.key.m,
-            self.public.key.e,
-            self.key.e,
-            self.primes.p,
-            self.primes.q,
-            self.key.e % (self.primes.p - 1),
-            self.key.e % (self.primes.q - 1),
-            pow(self.primes.q, -1, self.primes.p),
-        ])
-        return PEM.BuildPEM(payload, "RSA PRIVATE KEY")
+        return RSAFunctions.PrivateKeyExport(self.key.m, self.public.key.e, self.key.e, self.primes.p, self.primes.q)
 
 
-def Generate(bit: int = 2048, e: int = 65537, **args) -> None:
+def Generate(bit: int = 2048, e: int = 65537, **args) -> PrivateKey:
     """Generate a private key with bit length bit and e as public exponent."""
     if "p" in args and "q" in args:
         primes = RSAFunctions.Primes(args["p"], args["q"])
