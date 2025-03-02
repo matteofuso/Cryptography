@@ -1,5 +1,5 @@
 import random
-from utils.math import math
+from utils.mathematics import mathematics
 
 class primality:
     __iterations = [
@@ -32,13 +32,13 @@ class primality:
 
         for _ in range(k):
             a = random.randint(2, n - 2)
-            x = pow(a, d, n)
+            x = mathematics.pow(a, d, n)
 
             if x == 1 or x == n - 1:
                 continue
 
             for _ in range(r - 1):
-                x = pow(x, 2, n)
+                x = mathematics.pow(x, 2, n)
                 if x == n - 1:
                     break
             else:
