@@ -8,6 +8,8 @@ class RSAPubKey():
     def encrypt(self, message: str|int) -> int:
         if type(message) == str:
             message = int.from_bytes(message.encode(), "big")
+        if message >= self.n:
+            raise ValueError("Message is too large")
         return mathematics.pow(message, self.e, self.n)
     
     def __str__(self):

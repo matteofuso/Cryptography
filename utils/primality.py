@@ -24,7 +24,6 @@ class primality:
         if n <= 1 or n % 2 == 0:
             return False
 
-        # write n as 2^r * d + 1
         r, d = 0, n - 1
         while d % 2 == 0:
             r += 1
@@ -48,7 +47,6 @@ class primality:
     
     def random_prime(bits):
         while True:
-            p = random.getrandbits(bits)
-            p |= 1
+            p = random.getrandbits(bits) | 1
             if primality.miller_rabin(p):
                 return p
