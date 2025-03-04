@@ -19,12 +19,19 @@ class mathematics:
         return x % m
 
     def extended_gcd(a, b):
-        if a == 0:
-            return (b, 0, 1)
-        g, x1, y1 = mathematics.extended_gcd(b % a, a)
-        x = y1 - (b // a) * x1
-        y = x1
-        return (g, x, y)
+        # Initialize variables
+        old_r, r = a, b
+        old_s, s = 1, 0
+        old_t, t = 0, 1
+        
+        # Iterate until r becomes 0
+        while r != 0:
+            quotient = old_r // r
+            old_r, r = r, old_r - quotient * r
+            old_s, s = s, old_s - quotient * s
+            old_t, t = t, old_t - quotient * t
+
+        return old_r, old_s, old_t
 
     def gcd(a, b):
         while b:
